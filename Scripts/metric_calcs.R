@@ -201,7 +201,10 @@ ez_subregions<-unique((dplyr::select(ez_subregions,Source,Date,Station,SubRegion
 #regular stations
 zoop_stations<-unique(dplyr::select(Zoop_BPUE,Source,Station,Longitude,Latitude))
 zoop_stations<-zoop_stations[complete.cases(zoop_stations$Longitude),]
-zoop_stations<-zoop_stations%>%filter(!Station%in%ez)
+zoop_stations<-(zoop_stations%>%filter(!Station%in%ez))
+zoop_stations<-unique(as.matrix(zoop_stations)) #for some reason have to do this to remove duplicates, wasn;t working on just the dataframe?
+zoop_stations<-as.data.frame(zoop_stations)
+
 zoop_stations_geom<-st_as_sf(zoop_stations,coords = c("Longitude", "Latitude"),remove = TRUE, crs = 4326)
 
 p<-ggplot()+
@@ -264,6 +267,8 @@ Zoop_FLOAT_LT<-Zoop_FLOAT_LT%>%
   group_by(water_year,Season)%>%
   dplyr::summarise(szn_BPUE=mean(szn_BPUE))
 
+Zoop_FLOAT_LT<-dplyr::rename(Zoop_FLOAT_LT,BPUE_ug=szn_BPUE)
+
 ##############################
 #FLOAT Short-term analysis (2010-2020, EMP, FMWT, STN, 20mm)
 ##############################
@@ -289,6 +294,7 @@ Zoop_ST_s<-Zoop_ST_s%>%inner_join(sams_table)%>%
 Zoop_FLOAT_ST<-Zoop_ST_s%>%
   group_by(water_year,Season)%>%
   dplyr::summarise(szn_BPUE=mean(season_BPUE))
+Zoop_FLOAT_ST<-dplyr::rename(Zoop_FLOAT_ST,BPUE_ug=szn_BPUE)
 
 #################################
 #DROUGHT BPUE Long term analysis (1975-2021,EMP)
@@ -315,6 +321,7 @@ Drought_LT_s<-Drought_LT_m%>%
 Zoop_Drought_LT<-Drought_LT_s%>%
   group_by(Season,water_year)%>%
   dplyr::summarise(szn_BPUE=mean(s_BPUE))
+Zoop_Drought_LT<-dplyr::rename(Zoop_Drought_LT,BPUE_ug=szn_BPUE)
 
 #################################
 #DROUGHT CPUE Long term analysis (1975-2010,EMP)
@@ -362,10 +369,7 @@ dist_center<-function(data,taxa){
 
 #calculate station distances using spacetools
 zoop_stations$Station_ID<-paste(zoop_stations$Source,zoop_stations$Station,sep="_")
-ez_stations$Station_ID<-paste(ez_stations$Source,ez_stations$Station,sep="_")
-
-zoop_stations<-unique(zoop_stations)
-ez_stations<-unique(ez_stations)
+ez_stations$Station_ID<-paste(ez_stations$Source,ez_stations$Station,ez_stations$Date,sep="_")
 
 #add in goldengate lat/long
 gg_c<-c("Golden_Gate","Golden_Gate","-122.4783","37.8199")
@@ -378,10 +382,19 @@ station_distances<-Waterdist(Water_map = spacetools::Delta, Points = zoop_statio
                              PointID_column = Station_ID)
 ez_distances<-Waterdist(Water_map = spacetools::Delta, Points = ez_stations,
                              Latitude_column = Latitude, Longitude_column = Longitude, 
-                             PointID_column = Station)
+                             PointID_column = Station_ID)
 
 station_distances_df<-as.data.frame(station_distances)
-station_distances_df<-rownames_to_column(station_distances_df)
+station_distances_df<-rownames_to_column(station_distances_df,var="Station_ID")
+station_distances_df<-dplyr::select(station_distances_df,Station_ID,Golden_Gate)
+
+ez_distances_df<-as.data.frame(ez_distances)
+ez_distances_df<-rownames_to_column(ez_distances_df,var="Station_ID")
+ez_distances_df<-dplyr::select(ez_distances_df,Station_ID,Golden_Gate)
+
+#seperate our Station ID info
+station_distances_df$Station_ID<-as.character(station_distances_df$Station_ID)
+station_distances_df$Source<-separate(station_distances_df$Station_ID,c("Source","Station"),sep="_")
 
 #################################
 #Save all the outputs

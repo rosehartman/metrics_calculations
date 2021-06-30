@@ -14,9 +14,9 @@ Zoop_FLOAT_ST$Analysis<-"FLOAT_ST_BPUE"
 Zoop_Drought_LT$Analysis<-"Drought_LT_BPUE"
 Zoop_Drought_LT_CPUE$Analysis<-"Drought_LT_CPUE"
 
-Zoop_FLOAT_LT$metric<-Zoop_FLOAT_LT$szn_BPUE
-Zoop_FLOAT_ST$metric<-Zoop_FLOAT_ST$szn_BPUE
-Zoop_Drought_LT$metric<-Zoop_Drought_LT$szn_BPUE
+Zoop_FLOAT_LT$metric<-Zoop_FLOAT_LT$BPUE_ug
+Zoop_FLOAT_ST$metric<-Zoop_FLOAT_ST$BPUE_ug
+Zoop_Drought_LT$metric<-Zoop_Drought_LT$BPUE_ug
 Zoop_Drought_LT_CPUE$metric<-Zoop_Drought_LT_CPUE$szn_CPUE
 
 
@@ -30,6 +30,6 @@ all_metrics$Year_Season<-paste(all_metrics$water_year,all_metrics$Season,sep=" "
 p<-ggplot(all_metrics,aes(water_year,metric))+
   geom_bar(stat="identity")+
   theme_classic()+theme(axis.text.x=element_text(angle=90,size=8))+
-  facet_wrap(Analysis~Season,nrow=4)
+  facet_wrap(Analysis~Season,nrow=4,scales ="free_y")
 p
 ggsave("Figures/all_metrics.png")
