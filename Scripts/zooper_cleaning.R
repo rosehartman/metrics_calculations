@@ -27,6 +27,6 @@ Micro_data<-Zoopsynther(Data_type = "Community",
                         Size_class = "Micro",
                         Date_range = c("1972-01-01", "2019-12-31"))
 
-Zooper_data<-Meso_data%>%rbind(Micro_data)
+Zooper_data<-Meso_data%>%rbind(Micro_data)%>%rbind(Macro_data)
 
 saveRDS(Zooper_data,"Data/Zooper_data.rds")
