@@ -17,15 +17,15 @@ zoop_data<-Zoopdownloader(Data_sets=c("EMP_Meso","FMWT_Meso","STN_Meso","20mm_Me
 Meso_data <- Zoopsynther(Data_type = "Community",
                          Sources = c("EMP", "FRP", "FMWT","STN","20mm"),
                          Size_class = "Meso",
-                         Date_range = c("1972-01-01", "2019-12-31"))
+                         Date_range = c("1972-01-01", "2020-12-31"))
 Macro_data<-Zoopsynther(Data_type = "Community",
                         Sources = c("EMP", "FRP", "FMWT","STN"),
                         Size_class = "Macro",
-                        Date_range = c("1972-01-01", "2019-12-31"))
+                        Date_range = c("1972-01-01", "2020-12-31"))
 Micro_data<-Zoopsynther(Data_type = "Community",
                         Sources = c("EMP"),
                         Size_class = "Micro",
-                        Date_range = c("1972-01-01", "2019-12-31"))
+                        Date_range = c("1972-01-01", "2020-12-31"))
 
 Zooper_data<-Meso_data%>%rbind(Micro_data)%>%rbind(Macro_data)
 

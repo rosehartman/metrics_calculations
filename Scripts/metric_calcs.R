@@ -50,6 +50,8 @@ Zoop_data<-readRDS("Data/Zooper_data.rds")
 #set taxa of interest list
 target_FLOAT_taxa<-c("Pseudodiaptomus Juvenile",
                      "Pseudodiaptomus forbesi Adult",
+                     "Bosmina longirostris Adult",
+                     "Limnoithona tetraspina Adult",
                      "Daphnia Adult",
                      "Eurytemora affinis Adult",
                      "Eurytemora affinis Juvenile",
@@ -340,43 +342,46 @@ Zoop_FLOAT_ST<-dplyr::rename(Zoop_FLOAT_ST,BPUE_ug=szn_BPUE)
 #################################
 #DROUGHT BPUE Long term analysis (1975-2021,EMP)
 #################################
-rosies_table<-read.csv("Data/Rosies_regions.csv")
+rosies_table<-read.csv("Data/Rosies_regions.csv",fileEncoding="UTF-8-BOM")
 Drought_LT<-Zoop_BPUE%>%
   filter(Taxlifestage%in%target_DROUGHT_taxa)
 
+Drought_LT<-Drought_LT%>%inner_join(rosies_table)
+
 #first calc total BPUE for each sample
-Drought_LT_t<-Drought_LT%>%group_by(Station,Date,SubRegion,water_year,month)%>%
+Drought_LT_t<-Drought_LT%>%group_by(Station,Date,Long_term,Region,water_year,month)%>%
   dplyr::summarise(totalBPUE=sum(BPUE))
 Drought_LT_t<-Drought_LT_t%>%
   inner_join(szn_mnth)
 Drought_LT_monthly_average<-Drought_LT_t%>%
-  group_by(water_year,month,SubRegion,Season)%>%
+  group_by(water_year,month,Long_term,Region,Season)%>%
   dplyr::summarise(month_BPUE=mean(totalBPUE))
 Drought_LT_m<-Drought_LT_monthly_average%>%
-  inner_join(rosies_table)%>%
   filter(Long_term==TRUE)
 #calculate seasonal averages
 Drought_LT_s<-Drought_LT_m%>%
-  group_by(water_year,SubRegion,Season)%>%
+  group_by(water_year,Long_term,Region,Season)%>%
   dplyr::summarise(s_BPUE=mean(month_BPUE))
 Zoop_Drought_LT<-Drought_LT_s%>%
   group_by(Season,water_year)%>%
   dplyr::summarise(szn_BPUE=mean(s_BPUE))
 Zoop_Drought_LT<-dplyr::rename(Zoop_Drought_LT,BPUE_ug=szn_BPUE)
+Zoop_Drought_LT<-Zoop_Drought_LT%>%
+  group_by(water_year)%>%
+  dplyr::summarise(BPUE_ug=mean(BPUE_ug))
 
 #Taxa break down
-taxa<-Drought_LT%>%group_by(Station,Date,SubRegion,water_year,month,Taxlifestage)%>%
+taxa<-Drought_LT%>%group_by(Station,Date,Long_term,Region,water_year,month,Taxlifestage)%>%
   dplyr::summarise(totalBPUE=sum(BPUE))
 #calculate monthly average totalBPUE
 taxa<-taxa%>%
-  group_by(water_year,month,SubRegion,Taxlifestage)%>%
+  group_by(water_year,month,Long_term,Region,Taxlifestage)%>%
   dplyr::summarise(month_BPUE=mean(totalBPUE))
 
 taxa<-taxa%>%inner_join(szn_mnth)
-taxa<-taxa%>%group_by(Season,water_year,SubRegion,Taxlifestage)%>%
+taxa<-taxa%>%group_by(Season,water_year,Long_term,Region,Taxlifestage)%>%
   dplyr::summarise(szn_BPUE=mean(month_BPUE))
 
-taxa<-taxa%>%inner_join(sams_table)#inner join narrows to just low_sal_zone
 taxa<-taxa%>%
   filter(Long_term=="TRUE")
 #calculate year szn average across subregions
@@ -384,21 +389,25 @@ taxa<-taxa%>%
   group_by(water_year,Season,Taxlifestage)%>%
   dplyr::summarise(szn_BPUE=mean(szn_BPUE))
 taxa<-dplyr::rename(taxa,BPUE_ug=szn_BPUE)
+taxa<-taxa%>%group_by(water_year,Taxlifestage)%>%
+  dplyr::summarise(BPUE_ug=mean(BPUE_ug))%>%filter(water_year<2021)
 p<-ggplot(taxa,aes(water_year,BPUE_ug,fill=Taxlifestage))+
-  geom_bar(stat="identity")+
-  facet_wrap(~Season)
+  geom_bar(stat="identity")
 p
 ggsave("Figures/DROUGHT_BPUE_Taxa.png")
 
 #create joint wide matrix
 Drought_LT_matrix<-Zoop_Drought_LT
 Drought_LT_matrix$Taxlifestage<-"All taxa"
+Drought_LT_matrix<-dplyr::select(Drought_LT_matrix,water_year,Taxlifestage,BPUE_ug)
 Drought_LT_matrix<-Drought_LT_matrix%>%
   rbind(taxa)
+Drought_LT_matrix<-Drought_LT_matrix%>%filter(water_year<2021)
+Drought_LT_matrix$BPUE_ug[Drought_LT_matrix$BPUE_ug == 0] <- NA
 
 Drought_LT_matrix<-Drought_LT_matrix%>%pivot_wider(names_from=Taxlifestage,values_from=BPUE_ug)
 
-write.csv(Drought_LT_matrix,"Outputs/Drought_matrix.csv",row.names = F)
+write.csv(Drought_LT_matrix,"Outputs/Drought_taxa_BPUEmatrix.csv",row.names = F)
 
 
 #################################
@@ -407,42 +416,48 @@ write.csv(Drought_LT_matrix,"Outputs/Drought_matrix.csv",row.names = F)
 #################################
 Drought_LT_CPUE<-Zoop_data%>%
   filter(Taxlifestage%in%target_DROUGHT_taxa)
-
-Drought_LT_CPUE<-Drought_LT_CPUE%>% #join in subregions
-  inner_join(station_subregions)
 Drought_LT_CPUE$month<-as.numeric(format(as.Date(Drought_LT_CPUE$Date), "%m"))
 Drought_LT_CPUE$year<-as.numeric(format(as.Date(Drought_LT_CPUE$Date), "%Y"))
 Drought_LT_CPUE<-Drought_LT_CPUE%>%inner_join(szn_mnth)
 Drought_LT_CPUE$water_year<-wtr_yr(Drought_LT_CPUE$Date)
 
-Drought_LT_CPUE_grouped<-Drought_LT_CPUE%>%group_by(Station,Date,SubRegion,water_year,month,Season)%>%
+Drought_LT_CPUE_dist<-Drought_LT_CPUE #set up for distribution
+
+Drought_LT_CPUE<-Drought_LT_CPUE%>% #join in subregions
+  inner_join(station_subregions)
+
+Drought_LT_CPUE<-Drought_LT_CPUE%>%inner_join(rosies_table)
+
+Drought_LT_CPUE_grouped<-Drought_LT_CPUE%>%group_by(Station,Date,Long_term,Region,water_year,month,Season)%>%
   filter(water_year>1974)%>%
   dplyr::summarise(totalCPUE=sum(CPUE))
 Drought_LT_CPUE2<-Drought_LT_CPUE_grouped%>%
-  group_by(water_year,month,SubRegion,Season)%>%
+  group_by(water_year,month,Long_term,Region,Season)%>%
   dplyr::summarise(month_CPUE=mean(totalCPUE))
 Drought_LT_CPUE2<-Drought_LT_CPUE2%>%
-  inner_join(rosies_table)%>%
   filter(Long_term==TRUE)
 #calculate seasonal averages
 Drought_LT_CPUE2<-Drought_LT_CPUE2%>%
-  group_by(water_year,SubRegion,Season)%>%
+  group_by(water_year,Long_term,Region,Season)%>%
   dplyr::summarise(s_CPUE=mean(month_CPUE))
 Zoop_Drought_LT_CPUE2<-Drought_LT_CPUE2%>%
   group_by(Season,water_year)%>%
   dplyr::summarise(szn_CPUE=mean(s_CPUE))
+Zoop_Drought_LT_CPUE2<-Zoop_Drought_LT_CPUE2%>%
+  group_by(water_year)%>%
+  dplyr::summarise(szn_CPUE=mean(szn_CPUE))
 
 #################################
 #DROUGHT effort
 #################################
-Effort<-unique(dplyr::select(Drought_LT, Date,Station,Source,SizeClass,SubRegion,month,year))
+Effort<-unique(dplyr::select(Drought_LT, Date,Station,Source,SizeClass,Long_term,Region,month,year))
 Effort<-Effort%>%inner_join(szn_mnth)
-Effort<-Effort%>%inner_join(rosies_table)
+
 Effort<-Effort%>%filter(Long_term==TRUE)
 #Effort<-Effort%>%filter(Source=="EMP")
-Effort$Station_Date_Source_SizeClass<-paste(Effort$Station,Effort$Date,Effort$Source,Effort$SizeClass,Effort$SubRegion)
+Effort$Station_Date_Source_SizeClass<-paste(Effort$Station,Effort$Date,Effort$Source,Effort$SizeClass,Effort$Region)
 Effort<-Effort%>%
-  group_by(year,Season,SubRegion,Source,SizeClass)%>%
+  group_by(year,Region,Source,SizeClass)%>%
   dplyr::summarize(tows=length(Station_Date_Source_SizeClass))
 
 #################################
@@ -459,6 +474,7 @@ saveRDS(Zoop_FLOAT_ST,"Outputs/zoop_float_st.rds")
 saveRDS(Zoop_Drought_LT,"Outputs/zoop_drought_lt.rds")
 saveRDS(Zoop_Drought_LT_CPUE2,"Outputs/zoop_drought_lt_cpue.rds")
 saveRDS(Drought_LT_CPUE,"Outputs/drought_lt_cpue.rds")
+saveRDS(Drought_LT_CPUE_dist,"Outputs/drought_lt_cpue_dist.rds")
 saveRDS(Effort,"Outputs/effort.rds")
 saveRDS(ez_stations,"Outputs/ez_stations.rds")
 saveRDS(zoop_stations,"Outputs/zoopstations.rds")
