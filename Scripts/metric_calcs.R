@@ -367,8 +367,17 @@ Zoop_Drought_LT<-Drought_LT_s%>%
   dplyr::summarise(szn_BPUE=mean(s_BPUE))
 Zoop_Drought_LT<-dplyr::rename(Zoop_Drought_LT,BPUE_ug=szn_BPUE)
 Zoop_Drought_LT<-Zoop_Drought_LT%>%
+  dplyr::filter(Season != "Winter") %>%
   group_by(water_year)%>%
   dplyr::summarise(BPUE_ug=mean(BPUE_ug))
+
+#now do it by region instead
+Zoop_Drought_LT_reg<-Drought_LT_s%>%
+  filter(Season != "Winter") %>%
+  group_by(Region,water_year)%>%
+  dplyr::summarise(reg_BPUE=mean(s_BPUE)) %>%
+  dplyr::rename(BPUE_ug=reg_BPUE)
+
 
 #Taxa break down
 taxa<-Drought_LT%>%group_by(Station,Date,Long_term,Region,water_year,month,Taxlifestage)%>%
@@ -389,7 +398,9 @@ taxa<-taxa%>%
   group_by(water_year,Season,Taxlifestage)%>%
   dplyr::summarise(szn_BPUE=mean(szn_BPUE))
 taxa<-dplyr::rename(taxa,BPUE_ug=szn_BPUE)
-taxa<-taxa%>%group_by(water_year,Taxlifestage)%>%
+taxa<-taxa%>%
+  filter(Season != "Winter") %>%
+  group_by(water_year,Taxlifestage)%>%
   dplyr::summarise(BPUE_ug=mean(BPUE_ug))%>%filter(water_year<2021)
 p<-ggplot(taxa,aes(water_year,BPUE_ug,fill=Taxlifestage))+
   geom_bar(stat="identity")
@@ -447,6 +458,16 @@ Zoop_Drought_LT_CPUE2<-Zoop_Drought_LT_CPUE2%>%
   group_by(water_year)%>%
   dplyr::summarise(szn_CPUE=mean(szn_CPUE))
 
+#Calculate regional averages by water year
+Zoop_Drought_LT_REG<-Drought_LT_CPUE_grouped %>%
+  group_by(water_year,month, Region,Season)%>%
+  dplyr::summarise(month_CPUE=mean(totalCPUE)) %>%
+  filter(Season != "Winter") %>%
+  group_by(water_year,Region,Season)%>%
+  dplyr::summarise(s_cpue = mean(month_CPUE))%>%
+  group_by(Region, water_year)%>%
+  dplyr::summarise(reg_CPUE=mean(s_cpue))
+
 #################################
 #DROUGHT effort
 #################################
@@ -468,6 +489,8 @@ write.csv(Zoop_FLOAT_LT,"Outputs/zoop_float_lt.csv",row.names = F)
 write.csv(Zoop_FLOAT_ST,"Outputs/zoop_float_st.csv",row.names = F)
 write.csv(Zoop_Drought_LT,"Outputs/zoop_drought_lt.csv",row.names = F)
 write.csv(Zoop_Drought_LT_CPUE2,"Outputs/zoop_drought_lt_cpue.csv",row.names = F)
+write.csv(Zoop_Drought_LT_REG,"Outputs/zoop_drought_lt_REG.csv",row.names = F)
+write.csv(Zoop_Drought_LT_reg,"Outputs/zoop_drought_lt_REGbpue.csv",row.names = F)
 
 saveRDS(Zoop_FLOAT_LT,"Outputs/zoop_float_lt.rds")
 saveRDS(Zoop_FLOAT_ST,"Outputs/zoop_float_st.rds")
