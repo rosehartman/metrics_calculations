@@ -365,8 +365,8 @@ Drought_LT_s<-Drought_LT_m%>%
 Zoop_Drought_LT<-Drought_LT_s%>%
   group_by(Season,water_year)%>%
   dplyr::summarise(szn_BPUE=mean(s_BPUE))
-Zoop_Drought_LT<-dplyr::rename(Zoop_Drought_LT,BPUE_ug=szn_BPUE)
-Zoop_Drought_LT<-Zoop_Drought_LT%>%
+Zoop_Drought_LTall<-dplyr::rename(Zoop_Drought_LT,BPUE_ug=szn_BPUE)
+Zoop_Drought_LTall<-Zoop_Drought_LT%>%
   dplyr::filter(Season != "Winter") %>%
   group_by(water_year)%>%
   dplyr::summarise(BPUE_ug=mean(BPUE_ug))
@@ -388,21 +388,27 @@ taxa<-taxa%>%
   dplyr::summarise(month_BPUE=mean(totalBPUE))
 
 taxa<-taxa%>%inner_join(szn_mnth)
-taxa<-taxa%>%group_by(Season,water_year,Long_term,Region,Taxlifestage)%>%
+taxa_reg<-taxa%>%group_by(Season,water_year,Long_term,Region,Taxlifestage)%>%
   dplyr::summarise(szn_BPUE=mean(month_BPUE))
 
-taxa<-taxa%>%
+taxa_reg<-taxa_reg%>%
   filter(Long_term=="TRUE")
 #calculate year szn average across subregions
-taxa<-taxa%>%
+taxa_seas<-taxa_reg%>%
   group_by(water_year,Season,Taxlifestage)%>%
   dplyr::summarise(szn_BPUE=mean(szn_BPUE))
-taxa<-dplyr::rename(taxa,BPUE_ug=szn_BPUE)
-taxa<-taxa%>%
+taxa_seas<-dplyr::rename(taxa_seas,BPUE_ug=szn_BPUE)
+taxa_annual<-taxa_seas%>%
   filter(Season != "Winter") %>%
   group_by(water_year,Taxlifestage)%>%
   dplyr::summarise(BPUE_ug=mean(BPUE_ug))%>%filter(water_year<2021)
-p<-ggplot(taxa,aes(water_year,BPUE_ug,fill=Taxlifestage))+
+
+taxa_annual_reg<-taxa_reg%>%
+  filter(Season != "Winter") %>%
+  group_by(water_year,Taxlifestage, Region)%>%
+  dplyr::summarise(BPUE_ug=mean(szn_BPUE))%>%filter(water_year<2021)
+
+p<-ggplot(taxa_annual,aes(water_year,BPUE_ug,fill=Taxlifestage))+
   geom_bar(stat="identity")
 p
 ggsave("Figures/DROUGHT_BPUE_Taxa.png")
@@ -419,7 +425,7 @@ Drought_LT_matrix$BPUE_ug[Drought_LT_matrix$BPUE_ug == 0] <- NA
 Drought_LT_matrix<-Drought_LT_matrix%>%pivot_wider(names_from=Taxlifestage,values_from=BPUE_ug)
 
 write.csv(Drought_LT_matrix,"Outputs/Drought_taxa_BPUEmatrix.csv",row.names = F)
-
+save(taxa_reg, taxa_seas, taxa_annual, taxa_annual_reg, file = "Taxon_drought.RData")
 
 #################################
 #DROUGHT CPUE Long term analysis (1975-2010,EMP)
@@ -487,7 +493,8 @@ Effort<-Effort%>%
 
 write.csv(Zoop_FLOAT_LT,"Outputs/zoop_float_lt.csv",row.names = F)
 write.csv(Zoop_FLOAT_ST,"Outputs/zoop_float_st.csv",row.names = F)
-write.csv(Zoop_Drought_LT,"Outputs/zoop_drought_lt.csv",row.names = F)
+write.csv(Zoop_Drought_LTall,"Outputs/zoop_drought_lt.csv",row.names = F)
+write.csv(Zoop_Drought_LT,"Outputs/zoop_drought_lt_seasonal.csv",row.names = F)
 write.csv(Zoop_Drought_LT_CPUE2,"Outputs/zoop_drought_lt_cpue.csv",row.names = F)
 write.csv(Zoop_Drought_LT_REG,"Outputs/zoop_drought_lt_REG.csv",row.names = F)
 write.csv(Zoop_Drought_LT_reg,"Outputs/zoop_drought_lt_REGbpue.csv",row.names = F)
