@@ -364,8 +364,8 @@ Drought_LT_s<-Drought_LT_m%>%
   dplyr::summarise(s_BPUE=mean(month_BPUE))
 Zoop_Drought_LT<-Drought_LT_s%>%
   group_by(Season,water_year)%>%
-  dplyr::summarise(szn_BPUE=mean(s_BPUE))
-Zoop_Drought_LTall<-dplyr::rename(Zoop_Drought_LT,BPUE_ug=szn_BPUE)
+  dplyr::summarise(BPUE_ug=mean(s_BPUE))
+Zoop_Drought_LTall<-dplyr::rename(Zoop_Drought_LT)
 Zoop_Drought_LTall<-Zoop_Drought_LT%>%
   dplyr::filter(Season != "Winter") %>%
   group_by(water_year)%>%
@@ -414,11 +414,11 @@ p
 ggsave("Figures/DROUGHT_BPUE_Taxa.png")
 
 #create joint wide matrix
-Drought_LT_matrix<-Zoop_Drought_LT
+Drought_LT_matrix<-Zoop_Drought_LTall
 Drought_LT_matrix$Taxlifestage<-"All taxa"
 Drought_LT_matrix<-dplyr::select(Drought_LT_matrix,water_year,Taxlifestage,BPUE_ug)
 Drought_LT_matrix<-Drought_LT_matrix%>%
-  rbind(taxa)
+  rbind(taxa_annual)
 Drought_LT_matrix<-Drought_LT_matrix%>%filter(water_year<2021)
 Drought_LT_matrix$BPUE_ug[Drought_LT_matrix$BPUE_ug == 0] <- NA
 
@@ -508,4 +508,4 @@ saveRDS(Drought_LT_CPUE_dist,"Outputs/drought_lt_cpue_dist.rds")
 saveRDS(Effort,"Outputs/effort.rds")
 saveRDS(ez_stations,"Outputs/ez_stations.rds")
 saveRDS(zoop_stations,"Outputs/zoopstations.rds")
-
+ 

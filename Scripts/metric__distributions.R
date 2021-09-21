@@ -41,6 +41,7 @@ gg_ez<-c("Golden_Gate","Golden_Gate","-122.4783","37.8199","1/1/1999")
 zoop_stations<-zoop_stations%>%rbind(gg_c)
 ez_stations<-ez_stations%>%rbind(gg_ez)
 
+#comment out these following calls because they take forever and the outputs have been saved as rds files
 #station_distances<-Waterdist(Water_map = spacetools::Delta, Points = zoop_stations,
                              #Latitude_column = Latitude, Longitude_column = Longitude, 
                              #PointID_column = Station_ID)
